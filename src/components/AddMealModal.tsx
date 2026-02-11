@@ -26,7 +26,9 @@ export default function AddMealModal() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/v1/categories`);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/categories`,
+        );
         const data = await res.json();
         if (data.success) {
           setCategories(data.data);
@@ -57,7 +59,7 @@ export default function AddMealModal() {
 
     try {
       const res = await fetch(
-        `http://localhost:5000/api/v1/meals/create-meal`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/meals/create-meal`,
         {
           method: "POST",
           headers: {
