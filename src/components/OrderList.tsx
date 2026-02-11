@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 interface Order {
   id: string;
@@ -82,6 +83,46 @@ export default function OrderList() {
       </div>
     );
   }
+  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/orders/status/${orderId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: newStatus }),
+          credentials: "include",
+        },
+      );
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setOrders((prev) =>
+          prev.map((order) =>
+            order.id === orderId
+              ? {
+                  ...order,
+                  status: newStatus as
+                    | "PENDING"
+                    | "PREPARING"
+                    | "DELIVERED"
+                    | "CANCELLED",
+                }
+              : order,
+          ),
+        );
+        toast.success("Status updated!");
+      } else {
+        alert(data.message || "Failed to update status");
+      }
+    } catch (err) {
+      console.error("Update error:", err);
+      alert("Something went wrong!");
+    }
+  };
 
   return (
     <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden m-5">
@@ -132,7 +173,9 @@ export default function OrderList() {
                   <select
                     className="text-sm font-bold border rounded-lg p-2 outline-none focus:ring-2 focus:ring-orange-500 bg-white"
                     defaultValue={order.status}
-                    onChange={(e) => console.log("New status:", e.target.value)}
+                    onChange={(e) =>
+                      handleStatusUpdate(order.id, e.target.value)
+                    }
                   >
                     <option value="PENDING">Pending</option>
                     <option value="PREPARING">Preparing</option>
