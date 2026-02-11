@@ -14,6 +14,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+
 interface ExtendedUser {
   id: string;
   name: string;
@@ -57,14 +58,68 @@ export default function AdminDashboard() {
 
       if (!res.ok) throw new Error("Failed to fetch");
 
-      const data = await res.json();
-      setUsers(Array.isArray(data) ? data : data.data || []);
+      const result = await res.json();
+      setUsers(result.data || (Array.isArray(result) ? result : []));
       toast.success("Users updated");
     } catch (error) {
       console.error("Fetch error:", error);
       toast.error("Could not load user list");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRoleChange = async (userId: string, currentRole: string) => {
+    const newRole = currentRole === "CUSTOMER" ? "PROVIDER" : "CUSTOMER";
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/change-role`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({ userId, role: newRole }),
+        },
+      );
+
+      const result = await res.json();
+
+      if (result.success) {
+        toast.success(`Role updated to ${newRole}`);
+        fetchUsers();
+      } else {
+        toast.error(result.message || "Failed to update role");
+      }
+    } catch (error) {
+      toast.error("An error occurred while updating role");
+    }
+  };
+
+  const handleDelete = async (userId: string, userName: string) => {
+    if (!confirm(`Are you sure you want to delete ${userName}?`)) return;
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/delete-user/${userId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        },
+      );
+
+      const result = await res.json();
+
+      if (result.success) {
+        toast.success("User deleted successfully");
+        fetchUsers();
+      } else {
+        toast.error(result.message || "Failed to delete user");
+      }
+    } catch (error) {
+      toast.error("An error occurred while deleting user");
     }
   };
 
@@ -184,14 +239,16 @@ export default function AdminDashboard() {
                     <td className="px-6 py-4">
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
+                          onClick={() => handleRoleChange(user.id, user.role)}
                           className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-all"
-                          title="Promote"
+                          title="Toggle Role"
                         >
                           <UserCheck className="w-4 h-4" />
                         </button>
                         <button
+                          onClick={() => handleDelete(user.id, user.name)}
                           className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-all"
-                          title="Deactivate"
+                          title="Delete User"
                         >
                           <UserMinus className="w-4 h-4" />
                         </button>
