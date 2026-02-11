@@ -1,14 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
+// --- UI Components ---
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Utensils, ShoppingBag, Settings, Loader2 } from "lucide-react";
+// --- Icons ---
+import {
+  Utensils,
+  ShoppingBag,
+  Loader2,
+  TrendingUp,
+  Store,
+  Activity,
+  UserCircle,
+} from "lucide-react";
+// --- Custom Components & Hooks ---
 import AddMealModal from "@/components/AddMealModal";
 import OrderList from "@/components/OrderList";
 import MealList from "@/components/MealList";
+import { useSession } from "@/lib/auth-client";
 
 export default function ProviderDashboard() {
+  const { data: session } = useSession();
   const [stats, setStats] = useState({
     totalOrders: 0,
     activeMeals: 0,
@@ -18,104 +31,192 @@ export default function ProviderDashboard() {
 
   useEffect(() => {
     const fetchStats = async () => {
+      const token =
+        localStorage.getItem("token") || localStorage.getItem("accessToken");
+
+      if (!token) {
+        console.warn("Dashboard: No token found yet.");
+        if (!session) return;
+        setLoading(false);
+        return;
+      }
+
       try {
-        setLoading(true);
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/providers/profile`,
           {
-            credentials: "include",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
           },
         );
+
         const data = await res.json();
 
-        if (res.ok) {
+        if (res.ok && data.success) {
           setStats({
-            totalOrders: data.data.totalOrders,
-            activeMeals: data.data.activeMeals,
-            shopStatus: data.data.shopStatus,
+            totalOrders: data.data?.totalOrders || 0,
+            activeMeals: data.data?.activeMeals || 0,
+            shopStatus: data.data?.provider?.shopStatus || "OPEN",
           });
+        } else {
+          console.error("Dashboard Stats Error:", data.message);
         }
       } catch (error) {
-        console.error("Failed to fetch stats:", error);
+        console.error("Stats Fetch Network Error:", error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchStats();
-  }, []);
+  }, [session]);
 
+  // --- Loading State ---
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="animate-spin text-orange-600" size={48} />
+      <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
+        <div className="relative">
+          <Loader2 className="animate-spin text-orange-600" size={56} />
+          <div className="absolute inset-0 m-auto h-6 w-6 rounded-full bg-orange-100 animate-pulse" />
+        </div>
+        <p className="text-gray-500 font-medium animate-pulse">
+          Loading your kitchen...
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-10 px-4">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-orange-600">
-            Provider Dashboard
+    <div className="container mx-auto py-10 px-4 max-w-7xl animate-in fade-in duration-700">
+      {/* --- Header Section --- */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-orange-600 font-bold uppercase tracking-wider text-sm">
+            <Activity size={16} />
+            Control Center
+          </div>
+          <h1 className="text-4xl font-black text-gray-900 tracking-tight">
+            Hello,{" "}
+            <span className="text-orange-600">
+              {session?.user?.name || "Chef"}!
+            </span>
           </h1>
-          <p className="text-muted-foreground">
-            Manage your restaurant, meals, and orders.
+          <p className="text-gray-500 font-medium flex items-center gap-2">
+            <UserCircle size={16} />
+            Welcome back! Heres whats happening with your restaurant today.
           </p>
         </div>
-        <AddMealModal />
+        <div className="flex items-center gap-3">
+          <AddMealModal />
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
+      {/* --- Stats Overview --- */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        {/* Total Orders */}
+        <Card className="border-none shadow-md bg-gradient-to-br from-white to-orange-50/50 hover:shadow-xl transition-all duration-300 rounded-[28px] overflow-hidden group">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <ShoppingBag className="h-4 w-4 text-orange-600" />
+            <CardTitle className="text-sm font-bold text-gray-500 uppercase">
+              Total Orders
+            </CardTitle>
+            <div className="p-2 bg-orange-100 rounded-xl group-hover:scale-110 transition-transform">
+              <ShoppingBag className="h-5 w-5 text-orange-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalOrders}</div>
+            <div className="text-4xl font-black text-gray-900">
+              {stats.totalOrders}
+            </div>
+            <p className="text-xs text-orange-600 font-bold mt-2 flex items-center gap-1">
+              <TrendingUp size={12} /> Lifetime Sales
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Active Meals */}
+        <Card className="border-none shadow-md bg-gradient-to-br from-white to-blue-50/50 hover:shadow-xl transition-all duration-300 rounded-[28px] group">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Active Meals</CardTitle>
-            <Utensils className="h-4 w-4 text-orange-600" />
+            <CardTitle className="text-sm font-bold text-gray-500 uppercase">
+              My Menu
+            </CardTitle>
+            <div className="p-2 bg-blue-100 rounded-xl group-hover:scale-110 transition-transform">
+              <Utensils className="h-5 w-5 text-blue-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.activeMeals}</div>
+            <div className="text-4xl font-black text-gray-900">
+              {stats.activeMeals}
+            </div>
+            <p className="text-xs text-blue-600 font-bold mt-2 uppercase tracking-tighter">
+              Items Currently Live
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Shop Status */}
+        <Card
+          className={`border-none shadow-md hover:shadow-xl transition-all duration-300 rounded-[28px] group ${stats.shopStatus === "OPEN" ? "bg-emerald-50/30" : "bg-rose-50/30"}`}
+        >
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Shop Status</CardTitle>
-            <Settings
-              className={`h-4 w-4 ${stats.shopStatus === "OPEN" ? "text-green-600" : "text-red-600"}`}
-            />
+            <CardTitle className="text-sm font-bold text-gray-500 uppercase">
+              Shop Status
+            </CardTitle>
+            <div
+              className={`p-2 rounded-xl group-hover:rotate-12 transition-transform ${stats.shopStatus === "OPEN" ? "bg-emerald-100" : "bg-rose-100"}`}
+            >
+              <Store
+                className={`h-5 w-5 ${stats.shopStatus === "OPEN" ? "text-emerald-600" : "text-rose-600"}`}
+              />
+            </div>
           </CardHeader>
           <CardContent>
             <div
-              className={`text-lg font-bold ${stats.shopStatus === "OPEN" ? "text-green-600" : "text-red-600"}`}
+              className={`text-3xl font-black mb-1 ${stats.shopStatus === "OPEN" ? "text-emerald-600" : "text-rose-600"}`}
             >
               {stats.shopStatus}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`flex h-2 w-2 rounded-full ${stats.shopStatus === "OPEN" ? "bg-emerald-500 animate-ping" : "bg-rose-500"}`}
+              />
+              <p className="text-xs font-bold text-gray-500 tracking-wide uppercase">
+                Restaurant is {stats.shopStatus}
+              </p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs defaultValue="orders" className="space-y-4">
-        <TabsList className="bg-orange-50">
-          <TabsTrigger value="orders">Manage Orders</TabsTrigger>
-          <TabsTrigger value="meals">My Menu</TabsTrigger>
+      {/* --- Tabs Management --- */}
+      <Tabs defaultValue="orders" className="space-y-8">
+        <TabsList className="bg-gray-100/50 p-1.5 rounded-2xl border border-gray-100 shadow-sm inline-flex">
+          <TabsTrigger
+            value="orders"
+            className="rounded-xl px-8 py-2.5 data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all font-bold"
+          >
+            Manage Orders
+          </TabsTrigger>
+          <TabsTrigger
+            value="meals"
+            className="rounded-xl px-8 py-2.5 data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all font-bold"
+          >
+            My Menu Items
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="orders">
+        <TabsContent
+          value="orders"
+          className="animate-in slide-in-from-bottom-4 duration-500 outline-none"
+        >
           <OrderList />
         </TabsContent>
 
-        <TabsContent value="meals">
+        <TabsContent
+          value="meals"
+          className="animate-in slide-in-from-bottom-4 duration-500 outline-none"
+        >
           <MealList />
         </TabsContent>
       </Tabs>

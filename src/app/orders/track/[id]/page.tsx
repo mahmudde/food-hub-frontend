@@ -12,7 +12,6 @@ import {
   Store,
 } from "lucide-react";
 
-// --- Updated Types to match your Controller/Service ---
 type TOrderItem = {
   id: string;
   meal: { name: string; image_url: string };
@@ -137,11 +136,9 @@ export default function OrderTrackingPage() {
           </div>
 
           <div className="p-8 space-y-10">
-            {/* --- Progress Steps --- */}
             <div className="relative flex justify-between">
-              {/* Central Background Line */}
               <div className="absolute top-6 left-0 w-full h-1 bg-gray-100 -z-0 rounded-full" />
-              {/* Dynamic Progress Line */}
+
               <div
                 className="absolute top-6 left-0 h-1 bg-primary transition-all duration-1000 ease-in-out rounded-full shadow-[0_0_10px_rgba(236,72,153,0.5)]"
                 style={{
