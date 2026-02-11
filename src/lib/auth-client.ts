@@ -25,6 +25,11 @@ interface AuthSession {
 
 export const authClient = createAuthClient({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000",
+  fetchOptions: {
+    credentials: "include",
+    plugins: [],
+  },
+
   user: {
     additionalFields: {
       role: { type: "string" },

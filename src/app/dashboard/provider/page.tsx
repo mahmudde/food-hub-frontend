@@ -30,57 +30,51 @@ export default function ProviderDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      const token =
-        localStorage.getItem("token") || localStorage.getItem("accessToken");
-
-      if (!token) {
-        console.warn("Dashboard: No token found yet.");
-        if (!session) return;
-        setLoading(false);
-        return;
-      }
-
+    const fetchDashboardData = async () => {
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/providers/profile`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
+        setLoading(true);
+        const [profileRes, ordersRes, mealsRes] = await Promise.all([
+          fetch(
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/providers/profile`,
+            {
+              credentials: "include",
             },
-          },
-        );
+          ),
+          fetch(
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/orders/all-orders`,
+            {
+              credentials: "include",
+            },
+          ),
+          fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/meals`, {
+            credentials: "include",
+          }),
+        ]);
 
-        const data = await res.json();
-
-        if (res.ok && data.success) {
-          setStats({
-            totalOrders: data.data?.totalOrders || 0,
-            activeMeals: data.data?.activeMeals || 0,
-            shopStatus: data.data?.provider?.shopStatus || "OPEN",
-          });
-        } else {
-          console.error("Dashboard Stats Error:", data.message);
-        }
+        const profileData = await profileRes.json();
+        const ordersData = await ordersRes.json();
+        const mealsData = await mealsRes.json();
+        setStats({
+          totalOrders: ordersData.data?.data?.length || 0,
+          activeMeals: mealsData.data?.length || 0,
+          shopStatus: profileData.data?.provider?.shopStatus || "OPEN",
+        });
       } catch (error) {
-        console.error("Stats Fetch Network Error:", error);
+        console.error("Dashboard Data Fetch Error:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStats();
+    if (session) {
+      fetchDashboardData();
+    }
   }, [session]);
 
-  // --- Loading State ---
   if (loading) {
     return (
       <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
-        <div className="relative">
-          <Loader2 className="animate-spin text-orange-600" size={56} />
-          <div className="absolute inset-0 m-auto h-6 w-6 rounded-full bg-orange-100 animate-pulse" />
-        </div>
+        <Loader2 className="animate-spin text-orange-600" size={56} />
         <p className="text-gray-500 font-medium animate-pulse">
           Loading your kitchen...
         </p>
@@ -105,7 +99,7 @@ export default function ProviderDashboard() {
           </h1>
           <p className="text-gray-500 font-medium flex items-center gap-2">
             <UserCircle size={16} />
-            Welcome back! Heres whats happening with your restaurant today.
+            Welcome back! Heres whats happening today.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -116,7 +110,7 @@ export default function ProviderDashboard() {
       {/* --- Stats Overview --- */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
         {/* Total Orders */}
-        <Card className="border-none shadow-md bg-gradient-to-br from-white to-orange-50/50 hover:shadow-xl transition-all duration-300 rounded-[28px] overflow-hidden group">
+        <Card className="border-none shadow-md bg-gradient-to-br from-white to-orange-50/50 rounded-[28px] group">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-bold text-gray-500 uppercase">
               Total Orders
@@ -136,7 +130,7 @@ export default function ProviderDashboard() {
         </Card>
 
         {/* Active Meals */}
-        <Card className="border-none shadow-md bg-gradient-to-br from-white to-blue-50/50 hover:shadow-xl transition-all duration-300 rounded-[28px] group">
+        <Card className="border-none shadow-md bg-gradient-to-br from-white to-blue-50/50 rounded-[28px] group">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-bold text-gray-500 uppercase">
               My Menu
@@ -157,7 +151,7 @@ export default function ProviderDashboard() {
 
         {/* Shop Status */}
         <Card
-          className={`border-none shadow-md hover:shadow-xl transition-all duration-300 rounded-[28px] group ${stats.shopStatus === "OPEN" ? "bg-emerald-50/30" : "bg-rose-50/30"}`}
+          className={`border-none shadow-md rounded-[28px] group ${stats.shopStatus === "OPEN" ? "bg-emerald-50/30" : "bg-rose-50/30"}`}
         >
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-bold text-gray-500 uppercase">
@@ -181,7 +175,7 @@ export default function ProviderDashboard() {
               <span
                 className={`flex h-2 w-2 rounded-full ${stats.shopStatus === "OPEN" ? "bg-emerald-500 animate-ping" : "bg-rose-500"}`}
               />
-              <p className="text-xs font-bold text-gray-500 tracking-wide uppercase">
+              <p className="text-xs font-bold text-gray-500 uppercase">
                 Restaurant is {stats.shopStatus}
               </p>
             </div>
@@ -191,7 +185,7 @@ export default function ProviderDashboard() {
 
       {/* --- Tabs Management --- */}
       <Tabs defaultValue="orders" className="space-y-8">
-        <TabsList className="bg-gray-100/50 p-1.5 rounded-2xl border border-gray-100 shadow-sm inline-flex">
+        <TabsList className="bg-gray-100/50 p-1.5 rounded-2xl border border-gray-100">
           <TabsTrigger
             value="orders"
             className="rounded-xl px-8 py-2.5 data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all font-bold"
@@ -206,17 +200,11 @@ export default function ProviderDashboard() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent
-          value="orders"
-          className="animate-in slide-in-from-bottom-4 duration-500 outline-none"
-        >
+        <TabsContent value="orders">
           <OrderList />
         </TabsContent>
 
-        <TabsContent
-          value="meals"
-          className="animate-in slide-in-from-bottom-4 duration-500 outline-none"
-        >
+        <TabsContent value="meals">
           <MealList />
         </TabsContent>
       </Tabs>

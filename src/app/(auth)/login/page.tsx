@@ -17,16 +17,32 @@ export default function LoginPage() {
 
   // --- 1. Google Login Logic ---
   const handleGoogleLogin = async () => {
-    console.log("google login clicked");
     try {
       setLoading(true);
-      await authClient.signIn.social({
-        provider: "google",
-        callbackURL: "http://localhost:3000",
-      });
+
+      await authClient.signIn.social(
+        {
+          provider: "google",
+          callbackURL: "http://localhost:3000/",
+        },
+        {
+          onRequest: () => {
+            setLoading(true);
+          },
+          onSuccess: async () => {
+            toast.success("Logged in with Google!");
+            window.location.href = "/";
+          },
+          onError: (ctx) => {
+            console.error("Google Auth Error:", ctx);
+            toast.error(ctx.error.message || "Google login failed!");
+            setLoading(false);
+          },
+        },
+      );
     } catch (error) {
-      toast.error("Google login failed!");
-    } finally {
+      console.error("Catch Error:", error);
+      toast.error("An unexpected error occurred!");
       setLoading(false);
     }
   };
@@ -36,35 +52,27 @@ export default function LoginPage() {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const email = formData.get("email");
-    const password = formData.get("password");
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
 
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/login`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ email, password }),
+    await authClient.signIn.email(
+      {
+        email,
+        password,
+        callbackURL: "/",
+      },
+      {
+        onSuccess: () => {
+          toast.success("Login Successful!");
+          window.location.href = "/";
         },
-      );
-
-      const result = await response.json();
-
-      if (response.ok) {
-        toast.success("Login Successful!");
-        window.location.href = "/";
-      } else {
-        toast.error(result.message || "Invalid credentials");
-      }
-    } catch (error) {
-      toast.error("Server connection failed!");
-    } finally {
-      setLoading(false);
-    }
+        onError: (ctx) => {
+          toast.error(ctx.error.message || "Invalid credentials");
+          setLoading(false);
+        },
+      },
+    );
   };
-
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
       <Card className="w-full max-w-md shadow-lg border-t-4 border-primary">

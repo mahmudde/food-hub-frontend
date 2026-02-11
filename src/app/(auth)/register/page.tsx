@@ -18,13 +18,30 @@ export default function RegisterPage() {
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
-      await authClient.signIn.social({
-        provider: "google",
-        callbackURL: "http://localhost:3000",
-      });
+
+      await authClient.signIn.social(
+        {
+          provider: "google",
+          callbackURL: "http://localhost:3000/",
+        },
+        {
+          onRequest: () => {
+            setLoading(true);
+          },
+          onSuccess: async () => {
+            toast.success("Logged in with Google!");
+            window.location.href = "/";
+          },
+          onError: (ctx) => {
+            console.error("Google Auth Error:", ctx);
+            toast.error(ctx.error.message || "Google login failed!");
+            setLoading(false);
+          },
+        },
+      );
     } catch (error) {
-      toast.error("Google login failed. Please try again.");
-    } finally {
+      console.error("Catch Error:", error);
+      toast.error("An unexpected error occurred!");
       setLoading(false);
     }
   };
@@ -38,32 +55,28 @@ export default function RegisterPage() {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/signup`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ name, email, password, role: "CUSTOMER" }),
+    await authClient.signUp.email(
+      {
+        email,
+        password,
+        name,
+        callbackURL: "/",
+      },
+      {
+        onRequest: () => {
+          setLoading(true);
         },
-      );
-
-      const result = await response.json();
-
-      if (response.ok) {
-        toast.success("Account created successfully!");
-        window.location.href = "/";
-      } else {
-        toast.error(result.message || "Registration failed");
-      }
-    } catch (error) {
-      toast.error("Network error! Is your backend running?");
-    } finally {
-      setLoading(false);
-    }
+        onSuccess: () => {
+          toast.success("Account created successfully!");
+          window.location.href = "/";
+        },
+        onError: (ctx) => {
+          toast.error(ctx.error.message || "Registration failed");
+          setLoading(false);
+        },
+      },
+    );
   };
-
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
       <Card className="w-full max-w-md shadow-lg border-t-4 border-primary">

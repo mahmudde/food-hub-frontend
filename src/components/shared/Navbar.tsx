@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   LogOut,
   ClipboardList,
+  Loader2,
 } from "lucide-react";
 
 type AppUser = {
@@ -15,11 +16,11 @@ type AppUser = {
   email: string;
   name: string;
   image?: string | null;
-  role?: "ADMIN" | "PROVIDER" | "USER";
+  role?: "ADMIN" | "PROVIDER" | "CUSTOMER";
 };
 
 export default function Navbar() {
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
   const user = session?.user as AppUser;
 
   const getDashboardLink = () => {
@@ -48,7 +49,7 @@ export default function Navbar() {
             Browse Meals
           </Link>
 
-          {session && (
+          {!isPending && session && (
             <Link
               href="/orders"
               className="text-sm font-medium hover:text-primary transition-colors text-gray-700 flex items-center gap-1"
@@ -71,7 +72,10 @@ export default function Navbar() {
             </Button>
           </Link>
 
-          {session ? (
+          {isPending ? (
+            <Loader2 className="h-5 w-5 animate-spin text-orange-600" />
+          ) : session ? (
+            /* --- Logged In View --- */
             <div className="flex items-center gap-2 border-l pl-3 ml-1">
               <Link href={getDashboardLink()}>
                 <Button
@@ -81,7 +85,7 @@ export default function Navbar() {
                 >
                   <LayoutDashboard className="h-4 w-4" />
                   <span className="hidden sm:inline">
-                    {user?.role === "USER" ? "My Account" : "Dashboard"}
+                    {user?.role === "CUSTOMER" ? "My Account" : "Dashboard"}
                   </span>
                 </Button>
               </Link>
